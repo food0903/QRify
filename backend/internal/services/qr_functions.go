@@ -6,12 +6,19 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/phucnguyen/qrify/internal/models"
 	"github.com/skip2/go-qrcode"
+	"bytes"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 type QRCodeStore interface {
@@ -63,6 +70,32 @@ func NewQRService(store QRCodeStore) *QRService {
 	}
 }
 
+func addTextBelow(img image.Image, text string) (image.Image, error) {
+	qrBounds := img.Bounds()
+	textHeight := 20
+	gap := 20       
+	newHeight := qrBounds.Dy() + gap + textHeight
+	newImg := image.NewRGBA(image.Rect(0, 0, qrBounds.Dx(), newHeight))
+
+	draw.Draw(newImg, newImg.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
+	draw.Draw(newImg, qrBounds, img, image.Point{}, draw.Over)
+
+	
+	col := color.Black
+	point := fixed.Point26_6{
+		X: fixed.I((qrBounds.Dx() - len(text)*7) / 2), 
+		Y: fixed.I(qrBounds.Dy() + gap + 15),          
+	}
+	d := &font.Drawer{
+		Dst:  newImg,
+		Src:  image.NewUniform(col),
+		Face: basicfont.Face7x13,
+		Dot:  point,
+	}
+	d.DrawString(text)
+	return newImg, nil
+}
+
 // generate qr code by url
 func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeResponse, error) {
 	if req.URL == "" {
@@ -75,8 +108,21 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 	}
 
 	redirectURL := "http://localhost:8080/r/" + id
-	qrCode, err := qrcode.Encode(redirectURL, qrcode.Medium, 256)
+	qrImg, err := qrcode.New(redirectURL, qrcode.Medium)
 	if err != nil {
+		return nil, err
+	}
+	qrImg.DisableBorder = true
+	img := qrImg.Image(256)
+
+	// Add the ID as text below the QR code
+	imgWithText, err := addTextBelow(img, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, imgWithText); err != nil {
 		return nil, err
 	}
 
@@ -85,7 +131,7 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 		expiresAt = time.Now().Add(time.Duration(req.ExpiresInSec) * time.Second)
 	}
 
-	base64Img := base64.StdEncoding.EncodeToString(qrCode)
+	base64Img := base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	qr := &models.QRCode{
 		ID:          id,
@@ -105,7 +151,6 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 		QRCodeURL: "/r/" + qr.ID,
 		CreatedAt: qr.CreatedAt,
 		ExpiresAt: qr.ExpiresAt,
-		
 	}
 
 	return response, nil

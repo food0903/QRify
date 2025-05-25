@@ -11,7 +11,7 @@ QRify is a service that generates QR codes for URLs and tracks their usage throu
 
 ## Prerequisites
 
-- Go 1.21 or later
+- Go 1.23 or later
 - PostgreSQL
 - Docker (optional)
 - Kubernetes (optional)
