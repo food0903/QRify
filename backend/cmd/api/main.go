@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/phucnguyen/qrify/internal/handlers"
 	"github.com/phucnguyen/qrify/internal/services"
+    "github.com/gin-contrib/cors"
 )
 
 func main() {
@@ -25,6 +26,15 @@ func main() {
 
 	r := gin.Default()
 
+	r.Use(cors.New(cors.Config{
+        AllowOrigins:     []string{"http://localhost:3000"},
+        AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+        AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+        ExposeHeaders:    []string{"Content-Length"},
+        AllowCredentials: true,
+        MaxAge:           12 * 60 * 60, // 12 hours
+    }))
+
 
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -35,6 +45,7 @@ func main() {
 		qr.POST("", qrHandler.CreateQRCode)
 		qr.GET("/:id", qrHandler.GetQRCode)
 		qr.DELETE("/:id", qrHandler.DeleteQRCode)
+		qr.GET("", qrHandler.GetQRCodeByURL)
 	}
 
 	// Redirect endpoint for QR code scans

@@ -25,6 +25,7 @@ type QRCodeStore interface {
 	Save(qr *models.QRCode) error
 	FindByID(id string) (*models.QRCode, error)
 	DeleteByID(id string) error
+	FindByURL(url string) (*models.QRCode, error)
 }
 
 type PostgresQRCodeStore struct {
@@ -58,6 +59,18 @@ func (s *PostgresQRCodeStore) FindByID(id string) (*models.QRCode, error) {
 func (s *PostgresQRCodeStore) DeleteByID(id string) error {
 	_, err := s.db.Exec(`DELETE FROM qr_codes WHERE id = $1`, id)
 	return err
+}
+
+func (s *PostgresQRCodeStore) FindByURL(url string) (*models.QRCode, error) {
+	row := s.db.QueryRow(`SELECT id, url, created_at, expires_at, image_base64 FROM qr_codes WHERE url = $1`, url)
+	var qr models.QRCode
+	if err := row.Scan(&qr.ID, &qr.URL, &qr.CreatedAt, &qr.ExpiresAt, &qr.ImageBase64); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &qr, nil
 }
 
 type QRService struct {
@@ -146,11 +159,12 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 	}
 
 	response := &models.QRCodeResponse{
-		ID:        qr.ID,
-		URL:       qr.URL,
-		QRCodeURL: "/r/" + qr.ID,
-		CreatedAt: qr.CreatedAt,
-		ExpiresAt: qr.ExpiresAt,
+		ID:          qr.ID,
+		URL:         qr.URL,
+		QRCodeURL:   "/r/" + qr.ID,
+		CreatedAt:   qr.CreatedAt,
+		ExpiresAt:   qr.ExpiresAt,
+		ImageBase64: qr.ImageBase64,
 	}
 
 	return response, nil
@@ -170,12 +184,12 @@ func (s *QRService) GetQRCode(id string) (*models.QRCodeResponse, error) {
 		return nil, errors.New("QR code has expired")
 	}
 	return &models.QRCodeResponse{
-		ID:        qr.ID,
-		URL:       qr.URL,
-		QRCodeURL: "/r/" + qr.ID,
-		CreatedAt: qr.CreatedAt,
-		ExpiresAt: qr.ExpiresAt,
-		
+		ID:          qr.ID,
+		URL:         qr.URL,
+		QRCodeURL:   "/r/" + qr.ID,
+		CreatedAt:   qr.CreatedAt,
+		ExpiresAt:   qr.ExpiresAt,
+		ImageBase64: qr.ImageBase64,
 	}, nil
 }
 
@@ -187,7 +201,6 @@ func (s *QRService) DeleteQRCode(id string) error {
 	return nil
 }
 
-
 // generate a random ID
 func generateID() (string, error) {
 	bytes := make([]byte, 8)
@@ -195,4 +208,22 @@ func generateID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func (s *QRService) GetQRCodeByURL(url string) (*models.QRCodeResponse, error) {
+	qr, err := s.store.FindByURL(url)
+	if err != nil {
+		return nil, err
+	}
+	if qr == nil {
+		return nil, nil
+	}
+	return &models.QRCodeResponse{
+		ID:          qr.ID,
+		URL:         qr.URL,
+		QRCodeURL:   "/r/" + qr.ID,
+		CreatedAt:   qr.CreatedAt,
+		ExpiresAt:   qr.ExpiresAt,
+		ImageBase64: qr.ImageBase64,
+	}, nil
 } 

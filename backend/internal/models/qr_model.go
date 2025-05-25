@@ -21,4 +21,5 @@ type QRCodeResponse struct {
 	QRCodeURL string    `json:"qr_code_url"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	ImageBase64 string   `json:"image_base64,omitempty"`
 }

@@ -59,6 +59,24 @@ func (h *QRHandler) GetQRCode(c *gin.Context) {
 	c.JSON(http.StatusOK, qr)
 }
 
+func (h *QRHandler) GetQRCodeByURL(c *gin.Context) {
+    url := c.Query("url")
+    if url == "" {
+        c.JSON(400, gin.H{"error": "url query parameter is required"})
+        return
+    }
+    qr, err := h.qrService.GetQRCodeByURL(url)
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    if qr == nil {
+        c.JSON(404, gin.H{"error": "QR code not found"})
+        return
+    }
+    c.JSON(200, qr)
+} 
+
 // delete the qr code by id
 func (h *QRHandler) DeleteQRCode(c *gin.Context) {
 	id := c.Param("id")
