@@ -41,15 +41,17 @@ psql -U postgres
 
 -- In the psql shell:
 CREATE DATABASE qrify;
-CREATE USER qrify_user WITH PASSWORD 'postgres';
-GRANT ALL PRIVILEGES ON DATABASE qrify TO qrify_user;
+CREATE USER <YOUR_USERNAME> WITH PASSWORD <YOUR_PASSWORD>;
+GRANT ALL PRIVILEGES ON DATABASE qrify TO <YOUR_USERNAME>;
 ```
+
+> **Note:** Replace `<YOUR_USERNAME>` and `<YOUR_PASSWORD>` with your actual PostgreSQL username and password.
 
 - In the `backend` folder, create a `.env` file with the following content:
 
 ```
-DB_USER=qrify_user
-DB_PASSWORD=postgres
+DB_USER=<YOUR_USERNAME>
+DB_PASSWORD=<YOUR_PASSWORD>
 ```
 
 4. run the project
