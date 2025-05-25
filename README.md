@@ -31,10 +31,6 @@ cd qrify
 go mod download
 ```
 
-```bash
-go run cmd/api/main.go
-```
-
 3. Set up the database:
 
 - Install and start PostgreSQL if you haven't already.
@@ -56,10 +52,18 @@ DB_USER=qrify_user
 DB_PASSWORD=postgres
 ```
 
-- The backend loads this `.env` file using `github.com/joho/godotenv` with a relative path in `main.go`:
+4. run the project
 
-```
-_ = godotenv.Load("../../.env")
+- run the frontend:
+
+```bash
+cd frontend
+npm run dev
 ```
 
-Make sure to run the backend from the `backend/cmd/api` directory or adjust the path as needed.
+- run the backend:
+
+```bash
+cd backend/cmd/api/
+go run main.go
+```
