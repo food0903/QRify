@@ -51,7 +51,6 @@ export default function AnalyticsPage() {
                     setScanCount(count);
                     setShowModal(true);
                 } catch (parseError) {
-                    console.error('Error parsing metric:', parseError);
                     setError("Failed to parse scan count.");
                 }
             } else {
@@ -64,7 +63,6 @@ export default function AnalyticsPage() {
                 }
             }
         } catch (err: any) {
-            console.error('Error fetching metrics:', err);
             setError(err.message || "Failed to fetch analytics.");
         } finally {
             setLoading(false);

@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -9,32 +10,37 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/phucnguyen/qrify/internal/handlers"
 	"github.com/phucnguyen/qrify/internal/services"
-    "github.com/gin-contrib/cors"
+	"github.com/gin-contrib/cors"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	db, err := sql.Open("postgres", "postgres://qrify_user:postgres@localhost:5432/qrify?sslmode=disable")
-    if err != nil {
-        log.Fatalf("Failed to connect to database: %v", err)
-    }
-    defer db.Close()
+	_ = godotenv.Load("../../.env") 
 
-    store := services.NewPostgresQRCodeStore(db)
-    qrService := services.NewQRService(store)
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dsn := fmt.Sprintf("postgres://%s:%s@localhost:5432/qrify?sslmode=disable", user, password)
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	store := services.NewPostgresQRCodeStore(db)
+	qrService := services.NewQRService(store)
 
 	qrHandler := handlers.NewQRHandler(qrService)
 
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-        AllowOrigins:     []string{"http://localhost:3000"},
-        AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-        AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-        ExposeHeaders:    []string{"Content-Length"},
-        AllowCredentials: true,
-        MaxAge:           12 * 60 * 60, // 12 hours
-    }))
-
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 60 * 60,
+	}))
 
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -51,7 +57,6 @@ func main() {
 	// Redirect endpoint for QR code scans
 	r.GET("/r/:id", qrHandler.HandleRedirect)
 
-	
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

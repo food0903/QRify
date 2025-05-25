@@ -13,7 +13,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Responsive state
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 700);
@@ -22,7 +21,6 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Simulate QR code generation (replace with backend call)
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
   };
@@ -35,7 +33,7 @@ export default function Home() {
     try {
       const normalizedUrl = url.trim()
         .replace(/^https?:\/\/(www\.)?/, 'https://')
-        .replace(/\/+$/, ''); // Remove trailing slashes
+        .replace(/\/+$/, '');
 
 
       const searchUrl = `http://localhost:8080/v1/qr?url=${encodeURIComponent(normalizedUrl)}`;
@@ -46,7 +44,6 @@ export default function Home() {
       if (searchRes.ok) {
         qrObj = await searchRes.json();
       } else {
-        // 2. If not found, create a new QR code
         const createRes = await fetch("http://localhost:8080/v1/qr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,13 +53,11 @@ export default function Home() {
           throw new Error("Failed to create QR code.");
         }
         qrObj = await createRes.json();
-        console.log('Created new QR code:', qrObj);
       }
 
       setQrId(qrObj.id);
       setQrImage(`data:image/png;base64,${qrObj.image_base64}`);
     } catch (err: any) {
-      console.error('Error:', err);
       setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
@@ -80,10 +75,10 @@ export default function Home() {
         flexDirection: "column",
         alignItems: "center",
         padding: "0",
-        position: "relative", // for absolute positioning of Analytics link
+        position: "relative",
       }}
     >
-      {/* Analytics link in top-right */}
+
       <Link
         href="/analytics"
         style={{
@@ -296,7 +291,6 @@ export default function Home() {
               disabled={!qrImage}
               onClick={() => {
                 if (qrImage) {
-                  // For base64 image
                   const link = document.createElement("a");
                   link.href = qrImage;
                   link.download = `${qrId}.png`;
