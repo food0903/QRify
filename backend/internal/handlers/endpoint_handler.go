@@ -52,6 +52,10 @@ func (h *QRHandler) GetQRCode(c *gin.Context) {
 
 	qr, err := h.qrService.GetQRCode(id)
 	if err != nil {
+		if err.Error() == "QR code not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -108,12 +112,11 @@ func (h *QRHandler) GetScanCount(c *gin.Context) {
 
 	qr, err := h.qrService.GetQRCode(id)
 	if err != nil {
+		if err.Error() == "QR code not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "QR code not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if qr == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "QR code not found"})
 		return
 	}
 
