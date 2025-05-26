@@ -60,22 +60,22 @@ func (h *QRHandler) GetQRCode(c *gin.Context) {
 }
 
 func (h *QRHandler) GetQRCodeByURL(c *gin.Context) {
-    url := c.Query("url")
-    if url == "" {
-        c.JSON(400, gin.H{"error": "url query parameter is required"})
-        return
-    }
-    qr, err := h.qrService.GetQRCodeByURL(url)
-    if err != nil {
-        c.JSON(500, gin.H{"error": err.Error()})
-        return
-    }
-    if qr == nil {
-        c.JSON(404, gin.H{"error": "QR code not found"})
-        return
-    }
-    c.JSON(200, qr)
-} 
+	url := c.Query("url")
+	if url == "" {
+		c.JSON(400, gin.H{"error": "url query parameter is required"})
+		return
+	}
+	qr, err := h.qrService.GetQRCodeByURL(url)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	if qr == nil {
+		c.JSON(404, gin.H{"error": "QR code not found"})
+		return
+	}
+	c.JSON(200, qr)
+}
 
 // delete the qr code by id
 func (h *QRHandler) DeleteQRCode(c *gin.Context) {
@@ -92,4 +92,29 @@ func (h *QRHandler) DeleteQRCode(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *QRHandler) GetScanCount(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "QR code ID is required"})
+		return
+	}
+
+	qr, err := h.qrService.GetQRCode(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if qr == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "QR code not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":         id,
+		"scan_count": qr.ScanCount,
+		"expires_at": qr.ExpiresAt,
+	})
 }

@@ -8,14 +8,15 @@ import (
 	"errors"
 	"time"
 
-	_ "github.com/lib/pq"
-	"github.com/phucnguyen/qrify/internal/models"
-	"github.com/skip2/go-qrcode"
 	"bytes"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
+
+	_ "github.com/lib/pq"
+	"github.com/phucnguyen/qrify/internal/models"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
@@ -26,6 +27,7 @@ type QRCodeStore interface {
 	FindByID(id string) (*models.QRCode, error)
 	DeleteByID(id string) error
 	FindByURL(url string) (*models.QRCode, error)
+	IncrementScanCount(id string) error
 }
 
 type PostgresQRCodeStore struct {
@@ -38,16 +40,16 @@ func NewPostgresQRCodeStore(db *sql.DB) *PostgresQRCodeStore {
 
 func (s *PostgresQRCodeStore) Save(qr *models.QRCode) error {
 	_, err := s.db.Exec(
-		`INSERT INTO qr_codes (id, url, created_at, expires_at, image_base64) VALUES ($1, $2, $3, $4, $5)`,
-		qr.ID, qr.URL, qr.CreatedAt, qr.ExpiresAt, qr.ImageBase64,
+		`INSERT INTO qr_codes (id, url, created_at, expires_at, image_base64, scan_count) VALUES ($1, $2, $3, $4, $5, $6)`,
+		qr.ID, qr.URL, qr.CreatedAt, qr.ExpiresAt, qr.ImageBase64, qr.ScanCount,
 	)
 	return err
 }
 
 func (s *PostgresQRCodeStore) FindByID(id string) (*models.QRCode, error) {
-	row := s.db.QueryRow(`SELECT id, url, created_at, expires_at, image_base64 FROM qr_codes WHERE id = $1`, id)
+	row := s.db.QueryRow(`SELECT id, url, created_at, expires_at, image_base64, scan_count FROM qr_codes WHERE id = $1`, id)
 	var qr models.QRCode
-	if err := row.Scan(&qr.ID, &qr.URL, &qr.CreatedAt, &qr.ExpiresAt, &qr.ImageBase64); err != nil {
+	if err := row.Scan(&qr.ID, &qr.URL, &qr.CreatedAt, &qr.ExpiresAt, &qr.ImageBase64, &qr.ScanCount); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -62,9 +64,9 @@ func (s *PostgresQRCodeStore) DeleteByID(id string) error {
 }
 
 func (s *PostgresQRCodeStore) FindByURL(url string) (*models.QRCode, error) {
-	row := s.db.QueryRow(`SELECT id, url, created_at, expires_at, image_base64 FROM qr_codes WHERE url = $1`, url)
+	row := s.db.QueryRow(`SELECT id, url, created_at, expires_at, image_base64, scan_count FROM qr_codes WHERE url = $1`, url)
 	var qr models.QRCode
-	if err := row.Scan(&qr.ID, &qr.URL, &qr.CreatedAt, &qr.ExpiresAt, &qr.ImageBase64); err != nil {
+	if err := row.Scan(&qr.ID, &qr.URL, &qr.CreatedAt, &qr.ExpiresAt, &qr.ImageBase64, &qr.ScanCount); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -73,31 +75,35 @@ func (s *PostgresQRCodeStore) FindByURL(url string) (*models.QRCode, error) {
 	return &qr, nil
 }
 
+func (s *PostgresQRCodeStore) IncrementScanCount(id string) error {
+	_, err := s.db.Exec(`UPDATE qr_codes SET scan_count = scan_count + 1 WHERE id = $1`, id)
+	return err
+}
+
 type QRService struct {
 	store QRCodeStore
 }
 
 func NewQRService(store QRCodeStore) *QRService {
 	return &QRService{
-		store:        store,
+		store: store,
 	}
 }
 
 func addTextBelow(img image.Image, text string) (image.Image, error) {
 	qrBounds := img.Bounds()
 	textHeight := 20
-	gap := 20       
+	gap := 20
 	newHeight := qrBounds.Dy() + gap + textHeight
 	newImg := image.NewRGBA(image.Rect(0, 0, qrBounds.Dx(), newHeight))
 
 	draw.Draw(newImg, newImg.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
 	draw.Draw(newImg, qrBounds, img, image.Point{}, draw.Over)
 
-	
 	col := color.Black
 	point := fixed.Point26_6{
-		X: fixed.I((qrBounds.Dx() - len(text)*7) / 2), 
-		Y: fixed.I(qrBounds.Dy() + gap + 15),          
+		X: fixed.I((qrBounds.Dx() - len(text)*7) / 2),
+		Y: fixed.I(qrBounds.Dy() + gap + 15),
 	}
 	d := &font.Drawer{
 		Dst:  newImg,
@@ -141,7 +147,7 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 
 	expiresAt := time.Time{}
 	if req.ExpiresInSec > 0 {
-		expiresAt = time.Now().Add(time.Duration(req.ExpiresInSec) * time.Second)
+		expiresAt = time.Now().UTC().Add(time.Duration(req.ExpiresInSec) * time.Second)
 	}
 
 	base64Img := base64.StdEncoding.EncodeToString(buf.Bytes())
@@ -180,9 +186,6 @@ func (s *QRService) GetQRCode(id string) (*models.QRCodeResponse, error) {
 		return nil, errors.New("QR code not found")
 	}
 
-	if !qr.ExpiresAt.IsZero() && time.Now().After(qr.ExpiresAt) {
-		return nil, errors.New("QR code has expired")
-	}
 	return &models.QRCodeResponse{
 		ID:          qr.ID,
 		URL:         qr.URL,
@@ -190,6 +193,7 @@ func (s *QRService) GetQRCode(id string) (*models.QRCodeResponse, error) {
 		CreatedAt:   qr.CreatedAt,
 		ExpiresAt:   qr.ExpiresAt,
 		ImageBase64: qr.ImageBase64,
+		ScanCount:   qr.ScanCount,
 	}, nil
 }
 
@@ -226,4 +230,8 @@ func (s *QRService) GetQRCodeByURL(url string) (*models.QRCodeResponse, error) {
 		ExpiresAt:   qr.ExpiresAt,
 		ImageBase64: qr.ImageBase64,
 	}, nil
-} 
+}
+
+func (s *QRService) IncrementScanCount(id string) error {
+	return s.store.IncrementScanCount(id)
+}

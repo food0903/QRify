@@ -6,16 +6,16 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/joho/godotenv"
 	"github.com/phucnguyen/qrify/internal/handlers"
 	"github.com/phucnguyen/qrify/internal/services"
-	"github.com/gin-contrib/cors"
-	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	_ = godotenv.Load("../../.env") 
+	_ = godotenv.Load("../../.env")
 
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
@@ -52,6 +52,7 @@ func main() {
 		qr.GET("/:id", qrHandler.GetQRCode)
 		qr.DELETE("/:id", qrHandler.DeleteQRCode)
 		qr.GET("", qrHandler.GetQRCodeByURL)
+		qr.GET("/:id/scans", qrHandler.GetScanCount)
 	}
 
 	// Redirect endpoint for QR code scans
@@ -66,4 +67,4 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-} 
+}

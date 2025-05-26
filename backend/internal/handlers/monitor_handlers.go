@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,8 +29,6 @@ func (h *QRHandler) HandleRedirect(c *gin.Context) {
 		return
 	}
 
-	qrScansTotal.WithLabelValues(id).Inc()
-
 	qr, err := h.qrService.GetQRCode(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -40,5 +40,16 @@ func (h *QRHandler) HandleRedirect(c *gin.Context) {
 		return
 	}
 
+	if !qr.ExpiresAt.IsZero() && qr.ExpiresAt.Before(time.Now()) {
+		c.Redirect(http.StatusFound, "http://localhost:3000/expiration")
+		return
+	}
+
+	qrScansTotal.WithLabelValues(id).Inc()
+
+	if err := h.qrService.IncrementScanCount(id); err != nil {
+		log.Printf("Failed to increment scan count for QR code %s: %v", id, err)
+	}
+
 	c.Redirect(http.StatusFound, qr.URL)
-} 
+}

@@ -8,6 +8,7 @@ const DARK_BG = "#181818";
 export default function AnalyticsPage() {
     const [qrId, setQrId] = useState("");
     const [scanCount, setScanCount] = useState<number | null>(null);
+    const [expiresAt, setExpiresAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
@@ -28,40 +29,24 @@ export default function AnalyticsPage() {
         setShowModal(false);
 
         try {
-            const res = await fetch(`http://localhost:8080/metrics`);
+            const res = await fetch(`http://localhost:8080/v1/qr/${qrId}/scans`);
             if (!res.ok) {
-                throw new Error("Failed to fetch metrics.");
-            }
-            const text = await res.text();
-
-            const lines = text.split('\n');
-            const targetId = qrId.trim();
-
-            const metricLine = lines.find(line =>
-                line.startsWith('qr_scans_total') &&
-                line.includes(`qr_id="${targetId}"`)
-            );
-
-            if (metricLine) {
+                let errorMsg = "Failed to fetch scan count.";
                 try {
-                    const count = parseInt(metricLine.split(' ')[1]);
-                    if (isNaN(count)) {
-                        throw new Error("Invalid metric value");
+                    const errData = await res.json();
+                    if (errData && errData.error) {
+                        errorMsg = errData.error;
                     }
-                    setScanCount(count);
-                    setShowModal(true);
-                } catch (parseError) {
-                    setError("Failed to parse scan count.");
-                }
-            } else {
-                const qrRes = await fetch(`http://localhost:8080/v1/qr/${targetId}`);
-                if (qrRes.ok) {
-                    setScanCount(0);
-                    setShowModal(true);
-                } else {
-                    setError("QR code not found. Please check the ID and try again.");
-                }
+                } catch { }
+                throw new Error(errorMsg);
             }
+
+            const data = await res.json();
+            setScanCount(data.scan_count);
+            setExpiresAt(data.expires_at);
+            setShowModal(true);
+            setError(null);
+
         } catch (err: any) {
             setError(err.message || "Failed to fetch analytics.");
         } finally {
@@ -328,6 +313,32 @@ export default function AnalyticsPage() {
                                 }}>
                                     {scanCount === 1 ? "scan" : "scans"} recorded
                                 </div>
+                                {expiresAt && (
+                                    <div style={{ fontSize: "1.1rem", color: "red", textAlign: "center" }}>
+                                        {(() => {
+                                            const exp = new Date(expiresAt);
+                                            if (
+                                                exp.getUTCFullYear() === 1 &&
+                                                exp.getUTCMonth() === 0 &&
+                                                exp.getUTCDate() === 1 &&
+                                                exp.getUTCHours() === 0 &&
+                                                exp.getUTCMinutes() === 0 &&
+                                                exp.getUTCSeconds() === 0
+                                            ) {
+                                                return "This QR code never expires";
+                                            }
+                                            const now = new Date();
+                                            if (exp < now) {
+                                                return "QR code has expired";
+                                            }
+                                            const diff = exp.getTime() - now.getTime();
+                                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                                            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                                            return `QR code is valid for: ${days}d ${hours}h ${minutes}m`;
+                                        })()}
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>

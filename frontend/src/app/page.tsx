@@ -5,6 +5,17 @@ import Link from "next/link";
 const ORANGE = "#FF9900";
 const DARK_BG = "#181818";
 
+const EXPIRATION_OPTIONS = [
+  { label: "12 hours", value: 12 * 60 * 60 },
+  { label: "1 day", value: 24 * 60 * 60 },
+  { label: "30 days", value: 30 * 24 * 60 * 60 },
+  { label: "90 days", value: 90 * 24 * 60 * 60 },
+  { label: "180 days", value: 180 * 24 * 60 * 60 },
+  { label: "1 year", value: 365 * 24 * 60 * 60 },
+  { label: "5 years", value: 5 * 365 * 24 * 60 * 60 },
+  { label: "Never", value: 0 }
+];
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [qrImage, setQrImage] = useState<string | null>(null);
@@ -14,6 +25,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [expirationTime, setExpirationTime] = useState<string>("");
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 700);
     checkMobile();
@@ -35,24 +48,59 @@ export default function Home() {
         .replace(/^https?:\/\/(www\.)?/, 'https://')
         .replace(/\/+$/, '');
 
-
       const searchUrl = `http://localhost:8080/v1/qr?url=${encodeURIComponent(normalizedUrl)}`;
-
       const searchRes = await fetch(searchUrl);
 
       let qrObj;
+
       if (searchRes.ok) {
-        qrObj = await searchRes.json();
-      } else {
+        const data = await searchRes.json();
+        if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+          const createRes = await fetch("http://localhost:8080/v1/qr", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: normalizedUrl, expires_in_sec: Number(expirationTime) }),
+          });
+          if (!createRes.ok) {
+            let errorMsg = "Failed to create QR code.";
+            try {
+              const errData = await createRes.json();
+              if (errData && errData.error) {
+                errorMsg = errData.error;
+              }
+            } catch { }
+            throw new Error(errorMsg);
+          }
+          qrObj = await createRes.json();
+        } else {
+          qrObj = data;
+        }
+      } else if (searchRes.status === 404) {
         const createRes = await fetch("http://localhost:8080/v1/qr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: normalizedUrl }),
+          body: JSON.stringify({ url: normalizedUrl, expires_in_sec: Number(expirationTime) }),
         });
         if (!createRes.ok) {
-          throw new Error("Failed to create QR code.");
+          let errorMsg = "Failed to create QR code.";
+          try {
+            const errData = await createRes.json();
+            if (errData && errData.error) {
+              errorMsg = errData.error;
+            }
+          } catch { }
+          throw new Error(errorMsg);
         }
         qrObj = await createRes.json();
+      } else {
+        let errorMsg = "Failed to search QR code.";
+        try {
+          const errData = await searchRes.json();
+          if (errData && errData.error) {
+            errorMsg = errData.error;
+          }
+        } catch { }
+        throw new Error(errorMsg);
       }
 
       setQrId(qrObj.id);
@@ -63,6 +111,8 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  const isGenerateDisabled = loading || !url.trim() || expirationTime === "";
 
   return (
     <div
@@ -189,6 +239,31 @@ export default function Home() {
                 outline: "2px solid #ff9900",
               }}
             />
+            <select
+              value={expirationTime}
+              onChange={e => setExpirationTime(e.target.value)}
+              style={{
+                padding: "0.75rem 1rem",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "1.1rem",
+                background: "#222",
+                color: "#fff",
+                outline: "2px solid #FF9900",
+                cursor: "pointer",
+                minWidth: "120px",
+                marginLeft: "0.5rem"
+              }}
+            >
+              <option value="" disabled>
+                Expiration
+              </option>
+              {EXPIRATION_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button
               type="submit"
               style={{
@@ -199,17 +274,35 @@ export default function Home() {
                 padding: "0.75rem 1.2rem",
                 fontWeight: 700,
                 fontSize: "1.1rem",
-                cursor: "pointer",
-                transition: "background 0.2s",
+                cursor: isGenerateDisabled ? "not-allowed" : "pointer",
+                opacity: isGenerateDisabled ? 0.5 : 1,
+                transition: "background 0.2s, opacity 0.2s",
               }}
+              disabled={isGenerateDisabled}
             >
-              Generate
+              {loading ? "Loading..." : "Generate"}
             </button>
           </form>
           <div style={{ fontSize: "0.95rem", color: "#bbb" }}>
             Your QR code will be generated automatically. <br />
             The generated QR code will open this URL.
           </div>
+          {error && (
+            <div
+              style={{
+                color: "#ff4444",
+                marginTop: "1rem",
+                textAlign: "center",
+                fontSize: "1rem",
+                padding: "0.5rem 1rem",
+                background: "rgba(255, 68, 68, 0.1)",
+                borderRadius: "8px",
+                width: "100%"
+              }}
+            >
+              {error}
+            </div>
+          )}
         </section>
 
         {/* Right: QR code and ID */}
@@ -242,7 +335,14 @@ export default function Home() {
               <div style={{ color: "#555", fontSize: isMobile ? "1rem" : "1.2rem" }}>QR code preview</div>
             )}
           </div>
-          <div style={{ marginBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: "0.5rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}
+          >
             <button
               type="button"
               disabled={!qrId}
@@ -275,46 +375,56 @@ export default function Home() {
                 <>
                   {qrId}
                   <span style={{ fontSize: "1.2em" }}>📋</span>
-                  {copied && (
-                    <span style={{ marginLeft: 8, fontSize: "0.95em", color: "#fff" }}>
-                      Copied!
-                    </span>
-                  )}
                 </>
               ) : (
                 <span>your qr code id will appear here</span>
               )}
             </button>
+            {copied && (
+              <span
+                style={{
+                  marginTop: 6,
+                  fontSize: "1em",
+                  color: "white",
 
-            <button
-              type="button"
-              disabled={!qrImage}
-              onClick={() => {
-                if (qrImage) {
-                  const link = document.createElement("a");
-                  link.href = qrImage;
-                  link.download = `${qrId}.png`;
-                  link.click();
-                }
-              }}
-              style={{
-                marginTop: "1.2rem",
-                background: ORANGE,
-                color: "#181818",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.7em 1.5em",
-                fontWeight: 700,
-                fontSize: "1.1rem",
-                cursor: qrImage ? "pointer" : "not-allowed",
-                opacity: qrImage ? 1 : 0.5,
-                boxShadow: "0 2px 8px #0004",
-                transition: "opacity 0.2s",
-              }}
-            >
-              Download
-            </button>
+                  padding: "0.1em 0.7em",
+                  fontWeight: 600,
+                  letterSpacing: "0.03em",
+                  boxShadow: "0 2px 8px #0002"
+                }}
+              >
+                Copied!
+              </span>
+            )}
           </div>
+          <button
+            type="button"
+            disabled={!qrImage}
+            onClick={() => {
+              if (qrImage) {
+                const link = document.createElement("a");
+                link.href = qrImage;
+                link.download = `${qrId}.png`;
+                link.click();
+              }
+            }}
+            style={{
+              marginTop: "1.2rem",
+              background: ORANGE,
+              color: "#181818",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.7em 1.5em",
+              fontWeight: 700,
+              fontSize: "1.1rem",
+              cursor: qrImage ? "pointer" : "not-allowed",
+              opacity: qrImage ? 1 : 0.5,
+              boxShadow: "0 2px 8px #0004",
+              transition: "opacity 0.2s",
+            }}
+          >
+            Download
+          </button>
         </section>
       </main>
       <footer style={{ color: "#bbb", fontSize: "0.95rem", marginTop: "auto", padding: "1rem" }}>
