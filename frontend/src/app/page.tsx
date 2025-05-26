@@ -55,7 +55,23 @@ export default function Home() {
 
       if (searchRes.ok) {
         const data = await searchRes.json();
-        if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+        const isNeverExpires = (() => {
+          const exp = new Date(data.expires_at);
+          return (
+            exp.getUTCFullYear() === 1 &&
+            exp.getUTCMonth() === 0 &&
+            exp.getUTCDate() === 1 &&
+            exp.getUTCHours() === 0 &&
+            exp.getUTCMinutes() === 0 &&
+            exp.getUTCSeconds() === 0
+          );
+        })();
+
+        if (
+          data.expires_at &&
+          !isNeverExpires &&
+          new Date(data.expires_at).getTime() < Date.now()
+        ) {
           const createRes = await fetch("http://localhost:8080/v1/qr", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

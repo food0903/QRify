@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/phucnguyen/qrify/internal/models"
@@ -23,6 +24,10 @@ func NewQRHandler(qrService *services.QRService) *QRHandler {
 func (h *QRHandler) CreateQRCode(c *gin.Context) {
 	var req models.QRCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		if strings.Contains(err.Error(), "Field validation for 'URL' failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter a valid link."})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
