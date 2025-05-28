@@ -13,10 +13,9 @@ QRify is a service that generates QR codes for URLs and tracks their usage throu
 
 - Go 1.23 or later
 - PostgreSQL
-- Docker (optional)
-- Kubernetes (optional)
+- Nextjs
 
-## Quick Start
+## How To Run Backend
 
 1. Clone the repository:
 
@@ -60,6 +59,7 @@ DB_PASSWORD=<YOUR_PASSWORD>
 
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
@@ -69,3 +69,27 @@ npm run dev
 cd backend/cmd/api/
 go run main.go
 ```
+
+## How to Run the Frontend
+
+1. Navigate to the frontend directory:
+   ```sh
+   cd frontend
+   ```
+2. Install dependencies:
+   ```sh
+   npm install
+   ```
+3. Start the development server:
+   ```sh
+   npm run dev
+   ```
+4. Open your browser and go to [http://localhost:3000](http://localhost:3000)
+
+> **Note:** Make sure you have Node.js and npm installed. The default port is 3000. To use a different port, run:
+>
+> ```sh
+> PORT=4000 npm run dev
+> ```
+>
+> and visit [http://localhost:4000](http://localhost:4000)
