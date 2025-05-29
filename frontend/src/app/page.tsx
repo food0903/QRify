@@ -26,13 +26,20 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const [expirationTime, setExpirationTime] = useState<string>("");
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 700);
+    const checkTablet = () => setIsTablet(window.innerWidth < 1000 && window.innerWidth >= 700);
     checkMobile();
+    checkTablet();
     window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    window.addEventListener("resize", checkTablet);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("resize", checkTablet);
+    };
   }, []);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,7 +148,7 @@ export default function Home() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "0",
+        padding: isMobile ? "1rem" : "0",
         position: "relative",
       }}
     >
@@ -150,19 +157,19 @@ export default function Home() {
         href="/analytics"
         style={{
           position: "absolute",
-          top: 24,
-          right: 36,
+          top: isMobile ? 12 : 24,
+          right: isMobile ? 12 : 36,
           color: ORANGE,
           background: "#181818",
           fontWeight: 700,
           textDecoration: "none",
-          fontSize: "1.1rem",
+          fontSize: isMobile ? "0.98rem" : "1.1rem",
           display: "flex",
           alignItems: "center",
           gap: "0.3em",
           zIndex: 10,
           borderRadius: "8px",
-          padding: "0.4em 1em",
+          padding: isMobile ? "0.3em 0.7em" : "0.4em 1em",
           boxShadow: "0 2px 8px #0004",
           border: "none",
           transition: "background 0.2s, color 0.2s",
@@ -176,7 +183,7 @@ export default function Home() {
           (e.currentTarget as HTMLElement).style.color = ORANGE;
         }}
       >
-        Analytics <span style={{ fontSize: "1.3em" }}>→</span>
+        Analytics <span style={{ fontSize: isMobile ? "1.1em" : "1.3em" }}>→</span>
       </Link>
 
       <header
@@ -192,10 +199,10 @@ export default function Home() {
           src="/QRify.png"
           alt="QRify"
           style={{
-            width: isMobile ? "90px" : "160px",
-            height: isMobile ? "90px" : "160px",
+            width: isMobile ? (typeof window !== 'undefined' && window.innerWidth < 400 ? "60px" : "90px") : "160px",
+            height: isMobile ? (typeof window !== 'undefined' && window.innerWidth < 400 ? "60px" : "90px") : "160px",
             maxWidth: "90vw",
-            maxHeight: isMobile ? "90px" : "160px",
+            maxHeight: isMobile ? (typeof window !== 'undefined' && window.innerWidth < 400 ? "60px" : "90px") : "160px",
             objectFit: "contain",
             display: "block",
           }}
@@ -207,11 +214,14 @@ export default function Home() {
           borderRadius: "18px",
           boxShadow: "0 4px 32px #0008",
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          width: isMobile ? "98vw" : "min(900px, 95vw)",
+          flexDirection: isMobile || isTablet ? "column" : "row",
+          width: "100%",
+          maxWidth: isMobile ? "420px" : isTablet ? "700px" : "1100px",
+          minWidth: 0,
           minHeight: isMobile ? "auto" : "480px",
-          margin: isMobile ? "1rem 0" : "2rem 0",
+          margin: isMobile ? "1rem auto" : "2rem auto",
           overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {/* Left: Input */}
@@ -237,7 +247,12 @@ export default function Home() {
           </h1>
           {/* Form with input and submit button */}
           <form
-            style={{ display: "flex", gap: "0.5rem", marginBottom: "1.2rem" }}
+            style={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: "0.5rem",
+              marginBottom: "1.2rem"
+            }}
             onSubmit={handleSubmit}
           >
             <input
@@ -254,6 +269,7 @@ export default function Home() {
                 background: "#222",
                 color: "#fff",
                 outline: "2px solid #ff9900",
+                marginBottom: isMobile ? "0.5rem" : 0
               }}
             />
             <select
@@ -269,7 +285,8 @@ export default function Home() {
                 outline: "2px solid #FF9900",
                 cursor: "pointer",
                 minWidth: "120px",
-                marginLeft: "0.5rem"
+                marginLeft: isMobile ? 0 : "0.5rem",
+                marginBottom: isMobile ? "0.5rem" : 0
               }}
             >
               <option value="" disabled>
@@ -288,12 +305,16 @@ export default function Home() {
                 color: "#222",
                 border: "none",
                 borderRadius: "8px",
-                padding: "0.75rem 1.2rem",
+                padding: isMobile ? "1rem 0" : "0.75rem 1.2rem",
                 fontWeight: 700,
-                fontSize: "1.1rem",
+                fontSize: isMobile ? "1.15rem" : "1.1rem",
                 cursor: isGenerateDisabled ? "not-allowed" : "pointer",
                 opacity: isGenerateDisabled ? 0.5 : 1,
                 transition: "background 0.2s, opacity 0.2s",
+                marginLeft: isMobile ? 0 : "0.5rem",
+                marginTop: isMobile ? "0.5rem" : 0,
+                width: isMobile ? "100%" : undefined,
+                boxSizing: "border-box"
               }}
               disabled={isGenerateDisabled}
             >
@@ -336,8 +357,8 @@ export default function Home() {
         >
           <div
             style={{
-              width: isMobile ? 160 : 220,
-              height: isMobile ? 160 : 220,
+              width: isMobile ? 160 : isTablet ? 180 : 220,
+              height: isMobile ? 160 : isTablet ? 180 : 220,
               background: "#333",
               borderRadius: "12px",
               display: "flex",
