@@ -4,6 +4,7 @@ import Link from "next/link";
 
 const ORANGE = "#FF9900";
 const DARK_BG = "#181818";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AnalyticsPage() {
     const [qrId, setQrId] = useState("");
@@ -29,7 +30,7 @@ export default function AnalyticsPage() {
         setShowModal(false);
 
         try {
-            const res = await fetch(`http://localhost:8080/v1/qr/${qrId}/scans`);
+            const res = await fetch(`${apiUrl}/v1/qr/${qrId}/scans`);
             if (!res.ok) {
                 let errorMsg = "Failed to fetch scan count.";
                 try {

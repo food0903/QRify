@@ -1,14 +1,13 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/phucnguyen/qrify/internal/database"
 	"github.com/phucnguyen/qrify/internal/handlers"
 	"github.com/phucnguyen/qrify/internal/services"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -17,24 +16,21 @@ import (
 func main() {
 	_ = godotenv.Load("../../.env")
 
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dsn := fmt.Sprintf("postgres://%s:%s@localhost:5432/qrify?sslmode=disable", user, password)
-	db, err := sql.Open("postgres", dsn)
+	db, err := database.InitDB()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
 	store := services.NewPostgresQRCodeStore(db)
 	qrService := services.NewQRService(store)
-
 	qrHandler := handlers.NewQRHandler(qrService)
 
 	r := gin.Default()
 
+	// add here to test pr
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -42,7 +38,7 @@ func main() {
 		MaxAge:           12 * 60 * 60,
 	}))
 
-	// Prometheus metrics endpoint
+	// prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// QR code endpoints
@@ -55,7 +51,7 @@ func main() {
 		qr.GET("/:id/scans", qrHandler.GetScanCount)
 	}
 
-	// Redirect endpoint for QR code scans
+	// redirect endpoint for QR code scans
 	r.GET("/r/:id", qrHandler.HandleRedirect)
 
 	port := os.Getenv("PORT")

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 const ORANGE = "#FF9900";
 const DARK_BG = "#181818";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const EXPIRATION_OPTIONS = [
   { label: "12 hours", value: 12 * 60 * 60 },
@@ -48,7 +49,7 @@ export default function Home() {
         .replace(/^https?:\/\/(www\.)?/, 'https://')
         .replace(/\/+$/, '');
 
-      const searchUrl = `http://localhost:8080/v1/qr?url=${encodeURIComponent(normalizedUrl)}`;
+      const searchUrl = `${apiUrl}/v1/qr?url=${encodeURIComponent(normalizedUrl)}`;
       const searchRes = await fetch(searchUrl);
 
       let qrObj;
@@ -72,7 +73,7 @@ export default function Home() {
           !isNeverExpires &&
           new Date(data.expires_at).getTime() < Date.now()
         ) {
-          const createRes = await fetch("http://localhost:8080/v1/qr", {
+          const createRes = await fetch(`${apiUrl}/v1/qr`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url: normalizedUrl, expires_in_sec: Number(expirationTime) }),
@@ -92,7 +93,7 @@ export default function Home() {
           qrObj = data;
         }
       } else if (searchRes.status === 404) {
-        const createRes = await fetch("http://localhost:8080/v1/qr", {
+        const createRes = await fetch(`${apiUrl}/v1/qr`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: normalizedUrl, expires_in_sec: Number(expirationTime) }),
