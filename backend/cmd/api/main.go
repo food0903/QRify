@@ -28,6 +28,7 @@ func main() {
 
 	r := gin.Default()
 
+	// add here to test pr
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
