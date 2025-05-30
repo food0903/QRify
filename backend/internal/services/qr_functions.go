@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"os"
 	"time"
 
 	"bytes"
@@ -35,8 +36,8 @@ func (s *QRService) GenerateQRCode(req *models.QRCodeRequest) (*models.QRCodeRes
 	if err != nil {
 		return nil, err
 	}
-
-	redirectURL := "http://localhost:8080/r/" + id
+	frontendURL := os.Getenv("FRONTEND_URL")
+	redirectURL := frontendURL + "/r/" + id
 	qrImg, err := qrcode.New(redirectURL, qrcode.Medium)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,8 @@ func (h *QRHandler) HandleRedirect(c *gin.Context) {
 	}
 
 	if !qr.ExpiresAt.IsZero() && qr.ExpiresAt.Before(time.Now()) {
-		c.Redirect(http.StatusFound, "http://localhost:3000/expiration")
+		frontendURL := os.Getenv("FRONTEND_URL")
+		c.Redirect(http.StatusFound, frontendURL+"/expiration")
 		return
 	}
 

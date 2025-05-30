@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load("../../.env")
+	_ = godotenv.Load(".env.local")
 
 	db, err := database.InitDB()
 	if err != nil {
@@ -28,7 +28,6 @@ func main() {
 
 	r := gin.Default()
 
-	// add here to test pr
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -55,12 +54,9 @@ func main() {
 	r.GET("/r/:id", qrHandler.HandleRedirect)
 
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 
 	log.Printf("Server starting on port %s", port)
-	if err := r.Run(":" + port); err != nil {
+	if err := r.Run("0.0.0.0:" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
