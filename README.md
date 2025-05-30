@@ -1,95 +1,40 @@
 # QRify - QR Code Generator with Analytics
 
-QRify is a service that generates QR codes for URLs and tracks their usage through analytics. It provides a simple API to create QR codes and monitor their usage in real-time.
+QRify is a full-stack web application that allows users to generate QR codes for any URL and track their usage with analytics. It is designed for ease of use, flexibility, and modern deployment.
+
+---
 
 ## Features
 
-- Generate QR codes for any URL
-- Track QR code scans with detailed analytics
-- Set expiration times for QR codes
-- Prometheus metrics integration
+- **Generate QR codes** for any URL
+- **Track QR code scans** with how many time scanned
+- **Set expiration times** for QR codes
 
-## Prerequisites
+---
 
-- Go 1.23 or later
-- PostgreSQL
-- Nextjs
+## Tech Stack
 
-## How To Run Backend
+- **Frontend:** Next.js (React, TypeScript)
+- **Backend:** Go (Gin framework, REST API)
+- **Database:** PostgreSQL
+- **Metrics:** Prometheus
+- **Reverse Proxy:** Nginx (with optional HTTPS via Let's Encrypt)
+- **Containerization:** Docker & Docker Compose
 
-1. Clone the repository:
+---
 
-```bash
-git clone https://github.com/phucnguyen/qrify.git
-cd qrify
-```
+## User are able to
 
-2. Install dependencies:
+1. **User visits the QRify web app** on desktop or mobile.
+2. **User enters a URL** and selects an expiration time (optional).
+3. **QRify generates a unique QR code** for the URL and displays it to the user.
+4. **User can download the QR code** or copy its unique ID.
+5. **Anyone scanning the QR code** is redirected to the original URL (unless expired).
+6. **User can check analytics** (scan count, expiration status) for any QR code by entering its ID.
 
-```bash
-go mod download
-```
+---
 
-3. Set up the database:
+## Note
 
-- Install and start PostgreSQL if you haven't already.
-- Create a new database and user for QRify:
-
-```
-psql -U postgres
-
--- In the psql shell:
-CREATE DATABASE qrify;
-CREATE USER <YOUR_USERNAME> WITH PASSWORD <YOUR_PASSWORD>;
-GRANT ALL PRIVILEGES ON DATABASE qrify TO <YOUR_USERNAME>;
-```
-
-> **Note:** Replace `<YOUR_USERNAME>` and `<YOUR_PASSWORD>` with your actual PostgreSQL username and password.
-
-- In the `backend` folder, create a `.env` file with the following content:
-
-```
-DB_USER=<YOUR_USERNAME>
-DB_PASSWORD=<YOUR_PASSWORD>
-```
-
-4. run the project
-
-- run the frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-- run the backend:
-
-```bash
-cd backend/cmd/api/
-go run main.go
-```
-
-## How to Run the Frontend
-
-1. Navigate to the frontend directory:
-   ```sh
-   cd frontend
-   ```
-2. Install dependencies:
-   ```sh
-   npm install
-   ```
-3. Start the development server:
-   ```sh
-   npm run dev
-   ```
-4. Open your browser and go to [http://localhost:3000](http://localhost:3000)
-
-> **Note:** Make sure you have Node.js and npm installed. The default port is 3000. To use a different port, run:
->
-> ```sh
-> PORT=4000 npm run dev
-> ```
->
-> and visit [http://localhost:4000](http://localhost:4000)
+- For local development and production, environment variables are used for configuration (see `.env.local` and `.env.production` in the respective folders).
+- For production deployments, Docker Compose and Nginx are recommended. HTTPS can be enabled with Let's Encrypt and Certbot for your custom domain.
