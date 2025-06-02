@@ -1,17 +1,11 @@
 pipeline {
     agent any
     stages {
-        stage('Build') {
+        stage('Build & Test') {
             steps {
                 sh '''
-                    docker-compose build
-                '''
-            }
-        }
-        stage('Test') {
-            steps {
-                sh '''
-                    docker compose build backend
+                    cd QRify
+                    docker compose build
                     docker compose run --rm backend go test -v ./internal/tests
                 '''
             }
@@ -22,11 +16,10 @@ pipeline {
             }
             steps {
                 sh '''
-                    cd QRifier &&
-                    git pull &&
-                    docker compose down &&
+                    cd QRify
+                    git pull
+                    docker compose down
                     docker compose up --build -d
-                    '
                 '''
             }
         }
