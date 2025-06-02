@@ -3,10 +3,12 @@ pipeline {
     stages {
         stage('Build & Test') {
             steps {
-                sh '''
-                    docker compose build
-                    docker compose run --rm backend go test -v ./internal/tests
-                '''
+                dir('/root/QRify') {
+                    sh '''
+                        docker compose build
+                        docker compose run --rm backend go test -v ./internal/tests
+                    '''
+                }
             }
         }
         stage('Deploy') {
@@ -14,11 +16,13 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh '''
-                    git pull
-                    docker compose down
-                    docker compose up --build -d
-                '''
+                dir('/root/QRify') {
+                    sh '''
+                        git pull
+                        docker compose down
+                        docker compose up --build -d
+                    '''
+                }
             }
         }
     }
