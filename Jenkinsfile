@@ -1,13 +1,28 @@
 pipeline {
     agent any
     stages {
-        stage('Test') {
+        stage('Build & Test') {
             steps {
-                sh '''
-                    cd backend
-                    go mod download
-                    go test -v ./internal/tests
-                '''
+                dir('/var/lib/jenkins/QRify') {
+                    sh '''
+                        docker compose build
+                        docker compose run --rm backend go test -v ./internal/tests
+                    '''
+                }
+            }
+        }
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                dir('/var/lib/jenkins/QRify') {
+                    sh '''
+                        git pull
+                        docker compose down
+                        docker compose up --build -d
+                    '''
+                }
             }
         }
     }
