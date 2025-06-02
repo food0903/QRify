@@ -12,6 +12,7 @@ pipeline {
                     sh '''
                         docker compose build
                         docker compose run --rm backend go test -v ./internal/tests
+                        docker image prune -a -f
                     '''
                 }
             }
