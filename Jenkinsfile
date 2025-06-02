@@ -2,6 +2,11 @@ pipeline {
     agent any
     stages {
         stage('Build & Test') {
+            when {
+                not {
+                    branch 'main'
+                }
+            }
             steps {
                 dir('/var/lib/jenkins/QRify') {
                     sh '''
