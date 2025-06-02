@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Build & Test') {
             steps {
-                dir('/root/QRify') {
+                dir('/var/lib/jenkins/QRify') {
                     sh '''
                         docker compose build
                         docker compose run --rm backend go test -v ./internal/tests
@@ -16,7 +16,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                dir('/root/QRify') {
+                dir('/var/lib/jenkins/QRify') {
                     sh '''
                         git pull
                         docker compose down
