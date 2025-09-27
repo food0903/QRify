@@ -25,8 +25,10 @@ pipeline {
                 dir('/var/lib/jenkins/QRify') {
                     sh '''
                         git pull
-                        docker compose down
-                        docker compose up --build -d
+                        
+                        docker compose up --build -d --scale backend=2 --scale frontend=2
+                        
+                        docker image prune -a -f
                     '''
                 }
             }
