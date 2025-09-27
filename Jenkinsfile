@@ -28,6 +28,8 @@ pipeline {
                         
                         docker compose up --build -d --scale backend=2 --scale frontend=2
                         
+                        docker compose exec nginx nginx -s reload
+                        
                         docker image prune -a -f
                     '''
                 }
